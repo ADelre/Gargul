@@ -797,6 +797,20 @@ function RollOff:processRoll(message)
     if (not Roll) then
         return;
     end
+    
+--############################################################################################--
+
+    local numMembers = GetNumGuildMembers();
+
+    for i = 1, numMembers do
+        local name, rank, _, _, _, _, guildNote, officerNote = GetGuildRosterInfo(i)
+        if name and string.find(name:lower(), Roll.player:lower()) then
+            Roll.player = Roll.player.." ["..rank.."]";
+            break;
+        end
+    end
+
+--############################################################################################--
 
     tinsert(self.CurrentRollOff.Rolls, Roll);
 
