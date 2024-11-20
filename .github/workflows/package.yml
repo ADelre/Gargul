@@ -1,41 +1,39 @@
-name: Package and release
+name: Release CI
 
 on:
   push:
     tags:
-      - '**'
+      - 'v*'
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
 
-    env:
-      CF_API_KEY: ${{ secrets.CF_API_KEY }}
-      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
-      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
-
     steps:
-      - name: Clone project
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v3
 
-      - name: Package and release Cata
-        uses: BigWigsMods/packager@master
-        with:
-          args: "-o -u -S -m .pkgmeta -g cata"
+      - name: Zip files
+        run: |
+          zip -r Gargul.zip *
 
-      - name: Package and release Retail
-        uses: BigWigsMods/packager@master
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: "-o -u -S -m .pkgmeta -g retail"
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
 
-      - name: Package and release Era
-        uses: BigWigsMods/packager@master
+      - name: Upload Release Asset
+        id: create_release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: "-o -u -S -m .pkgmeta -g classic"
-
-      - name: Package and release Wrath
-        uses: BigWigsMods/packager@master
-        with:
-          args: "-o -u -S -m .pkgmeta -g wrath"
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./Gargul.zip
+          asset_name: Gargul.zip
+          asset_content_type: application/zip
