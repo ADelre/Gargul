@@ -805,7 +805,7 @@ function RollOff:processRoll(message)
     for i = 1, numMembers do
         local name, rank, _, _, _, _, guildNote, officerNote = GetGuildRosterInfo(i)
         if name and string.find(name:lower(), Roll.player:lower()) then
-            Roll.player = Roll.player.." ["..rank.."]";
+            Roll.playerRank = " ["..rank.."]";
             break;
         end
     end
@@ -950,7 +950,7 @@ function RollOff:refreshRollsTable()
         local Row = {
             cols = {
                 {
-                    value = rollerName,
+                    value = rollerName..Roll.playerRank,
                     color = GL:classRGBAColor(class),
                 },
                 {
