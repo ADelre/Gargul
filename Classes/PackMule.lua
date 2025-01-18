@@ -435,6 +435,7 @@ end
 --- Return all valid rules from the PackMule configuration
 ---
 ---@return table
+---@test /dump _G.Gargul.PackMule:getValidRules();
 function PackMule:getValidRules()
     local ValidRules = {};
     for _, Rule in pairs(self.Rules) do
@@ -442,6 +443,32 @@ function PackMule:getValidRules()
             tinsert(ValidRules, Rule);
         end
     end
+
+    -- Sort the rules, item ID specific rules first
+    table.sort(ValidRules, function (a, b)
+        aItem = a and a.item or false;
+        bItem = b and b.item or false;
+
+        -- This is to make sure we support item names, IDs and links
+        local ruleAConcernsItemID = false;
+        local ruleAItemID = tonumber(aItem) or GL:getItemIDFromLink(aItem);
+        if (ruleAItemID) then
+            ruleAItemID = math.floor(ruleAItemID);
+            ruleAConcernsItemID = GL:higherThanZero(ruleAItemID);
+        end
+
+        local ruleBConcernsItemID = false;
+        local ruleBItemID = tonumber(bItem) or GL:getItemIDFromLink(bItem);
+        if (ruleBItemID) then
+            ruleBItemID = math.floor(ruleBItemID);
+            ruleBConcernsItemID = GL:higherThanZero(ruleBItemID);
+        end
+
+        aNum = ruleAConcernsItemID and ruleAItemID or 999999999999;
+        bNum = ruleBConcernsItemID and ruleBItemID or 999999999999;
+
+        return aNum < bNum;
+    end);
 
     return ValidRules;
 end
@@ -472,6 +499,7 @@ function PackMule:getTargetForItem(itemLinkOrId, callback)
     end
 
     -- Load the item details first and then call the callback with the player target (only if any)
+    local ValidRules = self:getValidRules();
     GL:onItemLoadDo(itemLinkOrId, function (Details)
         if (not Details) then
             return;
@@ -479,7 +507,7 @@ function PackMule:getTargetForItem(itemLinkOrId, callback)
 
         local RuleThatApplies = false;
 
-        for _, Entry in pairs(self:getValidRules()) do
+        for _, Entry in pairs(ValidRules) do
             -- This is useful to see in which order rules are being handled
             GL:debug(string.format(
                 "Item: %s\nOperator: %s\nQuality: %s\nTarget: %s",
@@ -519,8 +547,8 @@ function PackMule:getTargetForItem(itemLinkOrId, callback)
                 or (operator == "<" and Details.quality < quality)
                 or (operator == "<=" and Details.quality <= quality)
             )) then
-                local bindType = Details.bindType or LE_ITEM_BIND_NONE;
-                local bindOnPickup = GL:inTable({ LE_ITEM_BIND_ON_ACQUIRE, LE_ITEM_BIND_QUEST }, bindType);
+                local bindType = Details.bindType or Enum.ItemBind.None;
+                local bindOnPickup = GL:inTable({ Enum.ItemBind.OnAcquire, Enum.ItemBind.Quest }, bindType);
 
                 local ruleApplies = (function ()
                     -- Check whether the item is whitelisted

@@ -1277,9 +1277,10 @@ end
 ---@param callback? function
 ---@param haltOnError? boolean
 ---@param sorter? function
----@return table
+---@return table, string
 ---
 --- /script _G.Gargul:onItemLoadDo(45613, function (Result) _G.Gargul:xd(Result); end);
+--- /script _G.Gargul:onItemLoadDo("|cffa335ee|Hitem:68915::::::::85:::::|h[Scales of Life]|h|r", function (Result) _G.Gargul:xd(Result); end);
 function GL:onItemLoadDo(Items, callback, haltOnError, sorter)
     haltOnError = haltOnError or false;
     callback = callback or function () end;
@@ -1291,18 +1292,18 @@ function GL:onItemLoadDo(Items, callback, haltOnError, sorter)
 
     local itemsLoaded = 0;
     local ItemData = {};
-    local lastError = "";
+    local lastError = nil;
     local callbackCalled = false;
     local numberOfItemsToLoad = self:count(Items);
 
     --- We use this nasty function construct in order to be able to return out of a for loop (see below)
     ---
     ---@param itemIdentifier string|number
-    ---@return void
     local function loadOrReturnItem(itemIdentifier)
         local ItemResult = {}; ---@type Item
         local itemID = tonumber(itemIdentifier);
         local identifierIsLink = type(itemIdentifier) == "string";
+        local _, itemType;
 
         -- A string was provided, treat it as an item link and fetch its ID
         if (not itemID
@@ -1313,6 +1314,8 @@ function GL:onItemLoadDo(Items, callback, haltOnError, sorter)
 
         -- If a number is provided we assume that it's an item ID
         if (itemID) then
+            _, itemType = self:getItemInfoInstant(itemIdentifier);
+
             -- Start loading the item
             if (identifierIsLink) then
                 ItemResult = Item:CreateFromItemLink(itemIdentifier);
@@ -1329,8 +1332,9 @@ function GL:onItemLoadDo(Items, callback, haltOnError, sorter)
         end
 
         if (
-            not ItemResult.IsItemEmpty or ItemResult:IsItemEmpty() -- This is Blizzard's way of saying: this item don't exist fool
-            or not ItemResult:GetItemID() -- The item does exist but not in this client version
+            not itemType -- The item doesn't actually exist in this client
+            or ItemResult:IsItemEmpty() -- This is Blizzard's way of saying: this item don't exist fool
+            or not ItemResult:GetItemID() -- The item could exist, but not in this client version
         ) then
             itemsLoaded = itemsLoaded + 1;
             lastError = "No item found with identifier " .. itemIdentifier;
@@ -1375,7 +1379,7 @@ function GL:onItemLoadDo(Items, callback, haltOnError, sorter)
                     ItemData = ItemData[1];
                 end
 
-                callback(ItemData);
+                callback(ItemData, lastError);
                 return;
             end
         end)
@@ -1383,6 +1387,7 @@ function GL:onItemLoadDo(Items, callback, haltOnError, sorter)
 
     ---@param itemLinkOrID string|number
     for _, itemLinkOrID in pairs(Items) do
+
         if (haltOnError and not GL:empty(lastError)) then
             GL:warning(lastError);
             return;
@@ -1398,7 +1403,7 @@ function GL:onItemLoadDo(Items, callback, haltOnError, sorter)
 
             if (singleItemProvided) then
                 ItemData = ItemData[1];
-                callback(ItemData);
+                callback(ItemData, lastError);
                 return;
             end
 
@@ -1406,7 +1411,7 @@ function GL:onItemLoadDo(Items, callback, haltOnError, sorter)
                 table.sort(ItemData, sorter);
             end
 
-            callback(ItemData);
+            callback(ItemData, lastError);
             return;
         end
     end
@@ -1450,7 +1455,7 @@ function GL:normalizeItem(ItemMixin)
         name = itemName,
         subclassID = subclassID,
         quality = itemQuality,
-        isBOE = GL:inTable({ LE_ITEM_BIND_ON_EQUIP, LE_ITEM_BIND_QUEST, }, bindType),
+        isBOE = GL:inTable({ Enum.ItemBind.OnEquip, Enum.ItemBind.Quest, }, bindType),
     };
 end
 
